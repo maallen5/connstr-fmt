@@ -25,6 +25,11 @@ func normalizeKeyValue(s string) (string, error) {
 		}
 		key = normalizeKey(key)
 		val = unquote(strings.TrimSpace(val))
+		if key == "server" {
+			// Hostnames are case-insensitive; lowercase them here so
+			// this matches the host normalization the URL style gets.
+			val = strings.ToLower(val)
+		}
 		if _, exists := values[key]; !exists {
 			order = append(order, key)
 		}
