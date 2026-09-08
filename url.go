@@ -29,6 +29,22 @@ func normalizeURL(s string) (string, error) {
 	return u.String(), nil
 }
 
+// normalizeJDBCURL handles JDBC-style URLs, which wrap an ordinary
+// connection URL behind a "jdbc:" prefix, e.g.
+//
+//	jdbc:mysql://user:pass@localhost:3306/mydb?useSSL=false
+//
+// The part after the prefix is normalized the same way as a plain
+// URL; the prefix itself is lowercased and reattached.
+func normalizeJDBCURL(s string) (string, error) {
+	rest := s[len("jdbc:"):]
+	normalized, err := normalizeURL(rest)
+	if err != nil {
+		return "", err
+	}
+	return "jdbc:" + normalized, nil
+}
+
 // normalizeHost lowercases the hostname portion while leaving
 // userinfo and port untouched, and drops a trailing dot that some
 // tools add for the "fully qualified" form.

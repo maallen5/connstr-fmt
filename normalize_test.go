@@ -70,6 +70,112 @@ func TestNormalizeURL(t *testing.T) {
 	}
 }
 
+func TestNormalizeJDBCURL(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "lowercases prefix and delegates to URL normalization",
+			in:   "JDBC:mysql://User:pw@DB.Example.COM:3306/app?serverTimezone=UTC&useSSL=false",
+			want: "jdbc:mysql://User:pw@db.example.com:3306/app?serverTimezone=UTC&useSSL=false",
+		},
+		{
+			name: "already canonical is left unchanged",
+			in:   "jdbc:postgresql://host:5432/app?sslmode=require",
+			want: "jdbc:postgresql://host:5432/app?sslmode=require",
+		},
+		{
+			name:    "invalid URL after the prefix is an error",
+			in:      "jdbc:mysql://user:pw@[::1",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Normalize(tc.in)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("Normalize(%q) = %q, want error", tc.in, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Normalize(%q) returned error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Errorf("Normalize(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeMySQLDSN(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "lowercases protocol and host, sorts params",
+			in:   "user:pass@tcp(HOST.Example.COM:3306)/mydb?loc=Local&parseTime=true",
+			want: "user:pass@tcp(host.example.com:3306)/mydb?loc=Local&parseTime=true",
+		},
+		{
+			name: "no protocol or address, just a database name",
+			in:   "/mydb",
+			want: "/mydb",
+		},
+		{
+			name: "no user, plain tcp address",
+			in:   "tcp(localhost:3306)/mydb",
+			want: "tcp(localhost:3306)/mydb",
+		},
+		{
+			name: "unix socket address keeps its path case",
+			in:   "user@unix(/var/run/MySQL/mysqld.sock)/mydb",
+			want: "user@unix(/var/run/MySQL/mysqld.sock)/mydb",
+		},
+		{
+			name: "user with no password",
+			in:   "user@tcp(host:3306)/mydb",
+			want: "user@tcp(host:3306)/mydb",
+		},
+		{
+			name: "already canonical is left unchanged",
+			in:   "user:pass@tcp(host:3306)/mydb?loc=Local&parseTime=true",
+			want: "user:pass@tcp(host:3306)/mydb?loc=Local&parseTime=true",
+		},
+		{
+			name:    "missing closing paren is an error",
+			in:      "tcp(host:3306/mydb",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Normalize(tc.in)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("Normalize(%q) = %q, want error", tc.in, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Normalize(%q) returned error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Errorf("Normalize(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestNormalizeKeyValue(t *testing.T) {
 	cases := []struct {
 		name    string

@@ -13,10 +13,12 @@ deterministically ordered parameters. It does not validate that a
 connection string will actually connect to anything - it just makes
 equivalent strings compare equal as text.
 
-It handles the two DSN shapes you run into most:
+It handles the DSN shapes you run into most:
 
 - URL style: `postgres://user:pass@Host:5432/mydb?sslmode=require&connect_timeout=10`
 - ADO.NET / ODBC key=value style: `Server=host;Database=db;User Id=admin;Password=x`
+- MySQL driver style: `user:pass@tcp(Host:3306)/mydb?parseTime=true&loc=Local`
+- JDBC style, which wraps any of the URL forms above: `jdbc:mysql://user:pass@Host:3306/mydb?useSSL=false`
 
 ## Usage
 
@@ -50,6 +52,11 @@ What it currently normalizes:
   `password`; `data source` -> `server`; `initial catalog` ->
   `database`) collapse to one canonical name
 - values are quoted only when they contain a separator character
+- for MySQL driver DSNs, the network protocol and tcp hostname are
+  lowercased and query params are sorted; a unix socket path keeps its
+  original case since paths are case-sensitive
+- a `jdbc:` prefix is recognized and lowercased, and the URL behind it
+  is normalized the same way as the plain URL style
 
 ## Status
 
