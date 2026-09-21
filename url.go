@@ -9,7 +9,7 @@ import (
 // normalizeURL handles DSNs written as URLs, e.g.
 //
 //	postgres://user:pass@localhost:5432/mydb?sslmode=require
-func normalizeURL(s string) (string, error) {
+func normalizeURL(s string, redact bool) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
 		return "", err
@@ -26,6 +26,12 @@ func normalizeURL(s string) (string, error) {
 		u.RawQuery = sortedQuery(u.RawQuery)
 	}
 
+	if redact && u.User != nil {
+		if _, hasPassword := u.User.Password(); hasPassword {
+			u.User = url.UserPassword(u.User.Username(), "REDACTED")
+		}
+	}
+
 	return u.String(), nil
 }
 
@@ -36,9 +42,9 @@ func normalizeURL(s string) (string, error) {
 //
 // The part after the prefix is normalized the same way as a plain
 // URL; the prefix itself is lowercased and reattached.
-func normalizeJDBCURL(s string) (string, error) {
+func normalizeJDBCURL(s string, redact bool) (string, error) {
 	rest := s[len("jdbc:"):]
-	normalized, err := normalizeURL(rest)
+	normalized, err := normalizeURL(rest, redact)
 	if err != nil {
 		return "", err
 	}

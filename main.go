@@ -2,15 +2,19 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
 )
 
 func main() {
+	redact := flag.Bool("redact", false, "mask password values in the output")
+	flag.Parse()
+
 	var input string
-	if len(os.Args) > 1 {
-		input = strings.Join(os.Args[1:], " ")
+	if flag.NArg() > 0 {
+		input = strings.Join(flag.Args(), " ")
 	} else {
 		data, err := readStdin()
 		if err != nil {
@@ -20,7 +24,7 @@ func main() {
 		input = data
 	}
 
-	out, err := Normalize(input)
+	out, err := Normalize(input, *redact)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "connfmt:", err)
 		os.Exit(1)

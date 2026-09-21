@@ -79,7 +79,7 @@ func parseMySQLDSN(s string) (mysqlDSN, error) {
 
 // normalizeMySQLDSN rewrites a MySQL driver DSN into canonical form:
 // lowercased network protocol and hostname, sorted query parameters.
-func normalizeMySQLDSN(s string) (string, error) {
+func normalizeMySQLDSN(s string, redact bool) (string, error) {
 	d, err := parseMySQLDSN(s)
 	if err != nil {
 		return "", err
@@ -87,6 +87,9 @@ func normalizeMySQLDSN(s string) (string, error) {
 
 	d.net = strings.ToLower(d.net)
 	d.addr = normalizeMySQLAddr(d.addr)
+	if redact && d.pass != "" {
+		d.pass = "REDACTED"
+	}
 
 	var b strings.Builder
 	if d.user != "" || d.pass != "" {

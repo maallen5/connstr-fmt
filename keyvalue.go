@@ -10,7 +10,7 @@ import (
 // semicolon-separated key=value pairs, e.g.
 //
 //	Server=localhost; Database = mydb ;User Id=admin;Password=x
-func normalizeKeyValue(s string) (string, error) {
+func normalizeKeyValue(s string, redact bool) (string, error) {
 	pairs := splitPairs(s)
 	if len(pairs) == 0 {
 		return "", fmt.Errorf("no key=value pairs found")
@@ -29,6 +29,9 @@ func normalizeKeyValue(s string) (string, error) {
 			// Hostnames are case-insensitive; lowercase them here so
 			// this matches the host normalization the URL style gets.
 			val = strings.ToLower(val)
+		}
+		if key == "password" && redact && val != "" {
+			val = "REDACTED"
 		}
 		if _, exists := values[key]; !exists {
 			order = append(order, key)

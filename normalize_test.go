@@ -53,7 +53,7 @@ func TestNormalizeURL(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Normalize(tc.in)
+			got, err := Normalize(tc.in, false)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("Normalize(%q) = %q, want error", tc.in, got)
@@ -96,7 +96,7 @@ func TestNormalizeJDBCURL(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Normalize(tc.in)
+			got, err := Normalize(tc.in, false)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("Normalize(%q) = %q, want error", tc.in, got)
@@ -159,7 +159,7 @@ func TestNormalizeMySQLDSN(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Normalize(tc.in)
+			got, err := Normalize(tc.in, false)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("Normalize(%q) = %q, want error", tc.in, got)
@@ -227,13 +227,74 @@ func TestNormalizeKeyValue(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Normalize(tc.in)
+			got, err := Normalize(tc.in, false)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("Normalize(%q) = %q, want error", tc.in, got)
 				}
 				return
 			}
+			if err != nil {
+				t.Fatalf("Normalize(%q) returned error: %v", tc.in, err)
+			}
+			if got != tc.want {
+				t.Errorf("Normalize(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeRedact(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "URL password is masked, username untouched",
+			in:   "postgres://user:hunter2@host:5432/app",
+			want: "postgres://user:REDACTED@host:5432/app",
+		},
+		{
+			name: "URL with no password is left alone",
+			in:   "postgres://user@host:5432/app",
+			want: "postgres://user@host:5432/app",
+		},
+		{
+			name: "URL with no userinfo is left alone",
+			in:   "postgres://host:5432/app",
+			want: "postgres://host:5432/app",
+		},
+		{
+			name: "JDBC URL password is masked",
+			in:   "jdbc:mysql://user:hunter2@host:3306/app",
+			want: "jdbc:mysql://user:REDACTED@host:3306/app",
+		},
+		{
+			name: "MySQL driver DSN password is masked",
+			in:   "user:hunter2@tcp(host:3306)/mydb",
+			want: "user:REDACTED@tcp(host:3306)/mydb",
+		},
+		{
+			name: "MySQL driver DSN with no password is left alone",
+			in:   "user@tcp(host:3306)/mydb",
+			want: "user@tcp(host:3306)/mydb",
+		},
+		{
+			name: "key=value password is masked",
+			in:   "Server=host;Uid=admin;Pwd=hunter2",
+			want: "password=REDACTED;server=host;user id=admin",
+		},
+		{
+			name: "key=value with no password is left alone",
+			in:   "Server=host;Uid=admin",
+			want: "server=host;user id=admin",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Normalize(tc.in, true)
 			if err != nil {
 				t.Fatalf("Normalize(%q) returned error: %v", tc.in, err)
 			}

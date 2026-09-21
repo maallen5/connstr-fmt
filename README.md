@@ -42,6 +42,15 @@ $ echo 'postgres://User:pw@DB.Example.COM:5432/app?sslmode=require&application_n
 postgres://User:pw@db.example.com:5432/app?application_name=svc&sslmode=require
 ```
 
+Pass `--redact` to mask password values instead of carrying them
+through to the output, useful when a normalized DSN is going into a
+log or a bug report:
+
+```
+$ ./connfmt --redact "Server=host;Uid=admin;Pwd=hunter2"
+password=REDACTED;server=host;user id=admin
+```
+
 What it currently normalizes:
 
 - scheme and hostname are lowercased (userinfo and path segments are
