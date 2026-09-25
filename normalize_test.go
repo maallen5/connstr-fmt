@@ -45,6 +45,16 @@ func TestNormalizeURL(t *testing.T) {
 			want: "postgres://user:pw@host:5432/app?application_name=svc&sslmode=require",
 		},
 		{
+			name: "multi-host list lowercases each host and keeps order",
+			in:   "postgres://user:pw@HOST1.Example.COM:5432,HOST2.example.com:5433,host3.example.com:5434/app",
+			want: "postgres://user:pw@host1.example.com:5432,host2.example.com:5433,host3.example.com:5434/app",
+		},
+		{
+			name: "multi-host list with no ports",
+			in:   "postgres://HOST1,HOST2,HOST3/app",
+			want: "postgres://host1,host2,host3/app",
+		},
+		{
 			name:    "invalid URL is an error",
 			in:      "postgres://user:pw@[::1",
 			wantErr: true,

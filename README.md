@@ -66,6 +66,10 @@ What it currently normalizes:
   original case since paths are case-sensitive
 - a `jdbc:` prefix is recognized and lowercased, and the URL behind it
   is normalized the same way as the plain URL style
+- for URL style DSNs, a comma-separated host list (replica sets,
+  failover targets, e.g. `host1:5432,host2:5433/db`) has each host
+  lowercased individually; the list order is left alone since it can
+  affect which host a driver tries first
 
 ## Status
 

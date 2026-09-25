@@ -51,16 +51,36 @@ func normalizeJDBCURL(s string, redact bool) (string, error) {
 	return "jdbc:" + normalized, nil
 }
 
-// normalizeHost lowercases the hostname portion while leaving
-// userinfo and port untouched, and drops a trailing dot that some
-// tools add for the "fully qualified" form.
+// normalizeHost lowercases the hostname portion of u.Host and drops a
+// trailing dot that some tools add for the "fully qualified" form.
+//
+// Some drivers (libpq, the Mongo driver, ClickHouse) put a
+// comma-separated list of hosts here for replica sets or failover, e.g.
+//
+//	postgres://user@host1:5432,host2:5433,host3:5434/db
+//
+// Each entry is normalized on its own and the list order is left as-is,
+// since for failover targets the order can affect which host is tried
+// first.
+//
+// Note this relies on net/url having accepted the authority in the
+// first place: it only parses a port off the final comma-separated
+// entry, so a host list is only valid input here if every entry carries
+// a port or none of them do.
 func normalizeHost(host string) string {
-	host = strings.TrimSpace(host)
-	prefix := ""
-	if at := strings.LastIndex(host, "@"); at >= 0 {
-		prefix = host[:at+1]
-		host = host[at+1:]
+	if !strings.Contains(host, ",") {
+		return normalizeHostPort(host)
 	}
+	parts := strings.Split(host, ",")
+	for i, p := range parts {
+		parts[i] = normalizeHostPort(strings.TrimSpace(p))
+	}
+	return strings.Join(parts, ",")
+}
+
+// normalizeHostPort lowercases a single "host" or "host:port" entry.
+func normalizeHostPort(host string) string {
+	host = strings.TrimSpace(host)
 	hostname := host
 	port := ""
 	if i := strings.LastIndex(host, ":"); i >= 0 {
@@ -68,7 +88,7 @@ func normalizeHost(host string) string {
 		port = host[i:]
 	}
 	hostname = strings.ToLower(strings.TrimSuffix(hostname, "."))
-	return prefix + hostname + port
+	return hostname + port
 }
 
 // sortedQuery re-encodes the query string with parameters in
